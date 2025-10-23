@@ -22,7 +22,7 @@ int successive_white_iterations = 0;
 
 
 // PID Values
-float kp = 200;
+float kp = 400;
 float ki = 0;
 float kd = 600;
 
@@ -35,6 +35,9 @@ int threshold = 500;
 
 // To avoid skibiddi
 bool just_turned = false;
+
+// All white conformation
+bool junction_checked = false;
 
 void setup()
 {
@@ -70,14 +73,16 @@ void loop()
   {
     if (!just_turned)
     {
+      move_motors(150, 150);
+      delay(200);
       turns[turns_length] = 'B';
       turns_length++;
       just_turned = true;
       position = read_line_position();
       while (position >= 0)
       {
-      turn_left();
-      delay(2);
+      turn_left_reverse();
+      delay(5);
       for (int i = 0; i < sensor_count; i++)
       {
         sensor_values[i] = analogRead(ir_sensor_pins[i]);
@@ -97,7 +102,7 @@ void loop()
   {
     position = read_line_position();
     error = position;
-    last_error = error; 
+    // last_error = error; 
   }
 
 
@@ -114,7 +119,7 @@ void loop()
     turns[turns_length] = 'L';
     turns_length++;
     turn_left();
-    delay(300);
+    delay(200);
     just_turned = true;
     for (int i = 0; i < sensor_count; i++)
     {
@@ -133,6 +138,7 @@ void loop()
     
       position = read_line_position();
     }
+    just_checked = false;
     return;
   }
 
@@ -141,9 +147,17 @@ void loop()
 
   else if ((position > 1) && !just_turned) // Right Turn 
   {
+    if (!junction_checked)
+    {
+      move_motors(150, 150);
+      delay(25);
+      junction_checked = true;
+      return;
+    }
+
     just_turned = true;
     move_motors(150, 150);
-    delay(30);
+    delay(200);
 
     black_count = 0;
     for (int i = 0; i < sensor_count; i++)
@@ -180,6 +194,7 @@ void loop()
       turns[turns_length] = 'S';
       turns_length++;
     }
+    junction_checked = false;
     return;
   }
     
@@ -188,8 +203,16 @@ void loop()
 
   else if ((position < -1) && !just_turned) // Left Turn
   {
+    if (!junction_checked)
+    {
+      move_motors(150, 150);
+      delay(25);
+      junction_checked = true;
+      return;
+    }
+    
     move_motors(150, 150);
-    delay(30);
+    delay(200);
     just_turned = true;
 
     black_count = 0;
@@ -246,6 +269,7 @@ void loop()
         position = read_line_position();
       }  
     }
+    junction_checked = false;
     return;
   }
 
@@ -259,19 +283,18 @@ void loop()
 
   move_motors(left_speed, right_speed);
   last_error = error;
-  Serial.print("Correction: "); Serial.print(correction);
-  Serial.print(" | L: "); Serial.print(left_speed);
-  Serial.print(" R: "); Serial.println(right_speed);
+  // Serial.print("Correction: "); Serial.print(correction);
+  // Serial.print(" | L: "); Serial.print(left_speed);
+  // Serial.print(" R: "); Serial.println(right_speed);
 
   if (position > -1.0 && position < 1.0)
   {
     just_turned = false;
   }
 
-
+  print_turns();
   delay(5);
-  
-  
+
 }
 
 
@@ -304,8 +327,8 @@ void turn_left_reverse()
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, HIGH);
 
-  analogWrite(ENA, 255);
-  analogWrite(ENB, 80);
+  analogWrite(ENA, 250);
+  analogWrite(ENB, 250);
 }
 
 float read_line_position()
@@ -345,4 +368,170 @@ void stop_motors()
   digitalWrite(IN4, LOW);
   analogWrite(ENA, 0);
   analogWrite(ENB, 0);
+}
+
+
+void optimize()
+{
+  bool change = true;
+  while (change)
+  {
+    change = false;
+    for (int i = 0; i < turns_length - 2; i++)
+    {
+      void optimize()
+{
+  bool change = true;
+  while (change)
+  {
+    change = false;
+    for (int i = 0; i < turns_length - 2; i++)
+    {
+      if (turns[i] == 'L' && turns[i+1] == 'B' && turns[i+2] == 'L')
+      {
+        turns[i] = 'S';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'L' && turns[i+1] == 'B' && turns[i+2] == 'S')
+      {
+        turns[i] = 'R';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'L' && turns[i+1] == 'B' && turns[i+2] == 'R')
+      {
+        turns[i] = 'B';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'S' && turns[i+1] == 'B' && turns[i+2] == 'L')
+      {
+        turns[i] = 'R';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'S' && turns[i+1] == 'B' && turns[i+2] == 'S')
+      {
+        turns[i] = 'B';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'S' && turns[i+1] == 'B' && turns[i+2] == 'R')
+      {
+        turns[i] = 'L';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'R' && turns[i+1] == 'B' && turns[i+2] == 'L')
+      {
+        turns[i] = 'B'; 
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'R' && turns[i+1] == 'B' && turns[i+2] == 'S')
+      {
+        turns[i] = 'L';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'R' && turns[i+1] == 'B' && turns[i+2] == 'R')
+      {
+        turns[i] = 'S';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'B' && turns[i+1] == 'B' && turns[i+2] == 'L')
+      {
+        turns[i] = 'R';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'B' && turns[i+1] == 'B' && turns[i+2] == 'S')
+      {
+        turns[i] = 'S';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+      
+      else if (turns[i] == 'B' && turns[i+1] == 'B' && turns[i+2] == 'R')
+      {
+        turns[i] = 'L';  
+        for (int j = i+1; j < turns_length - 2; j++)
+          turns[j] = turns[j+2];
+        turns_length -= 2;
+        change = true;
+        break;
+      }
+    }
+  }  
+}
+    }
+  }  
+}
+
+void print_turns()
+{
+  Serial.print("Path: ");
+  for (int i = 0; i < turns_length; i++)
+  {
+    Serial.print(turns[i]);
+    Serial.print(' ');
+  }
+  Serial.println();
+}
+
+void follow_path()
+{
+  while 
+  int white_count = 0;
+  for (int i = 0; i < sensor_count; i++)
+  {
+    sensor_values[i] = analogRead(ir_sensor_pins[i]);
+    if (sensor_values[i] < threshold) white_count++;
+  }
+
 }
