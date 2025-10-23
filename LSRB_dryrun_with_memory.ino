@@ -524,14 +524,14 @@ void print_turns()
   Serial.println();
 }
 
-void follow_path()
-{
-  while 
-  int white_count = 0;
-  for (int i = 0; i < sensor_count; i++)
-  {
-    sensor_values[i] = analogRead(ir_sensor_pins[i]);
-    if (sensor_values[i] < threshold) white_count++;
-  }
+// void follow_path()
+// {
+//   while 
+//   int white_count = 0;
+//   for (int i = 0; i < sensor_count; i++)
+//   {
+//     sensor_values[i] = analogRead(ir_sensor_pins[i]);
+//     if (sensor_values[i] < threshold) white_count++;
+//   }
 
-}
+// }
